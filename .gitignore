@@ -1,0 +1,15 @@
+**/.DS_Store
+**/.RData
+**/.Rhistory
+**/.Rapp.history
+**/*.pyc
+**/*.bbl
+**/*.blg
+**/*.aux
+**/*.synctex.gz
+**/__pycache__
+.Rproj.user
+**/*Rproj
+**/errors.log
+**/messages.log
+**/slurm-*

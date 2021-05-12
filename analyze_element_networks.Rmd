@@ -1,0 +1,51 @@
+---
+title: "Data analysis"
+author: "Stephanie J. Spielman"
+date: "5/12/2021"
+output: 
+  html_document:
+    theme: united
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dragon)
+
+# Information about elements that may be needed eventually
+elements <- dragon:::element_info
+```
+
+
+```{r oxygen_network}
+# Need to use with THREE COLONS with this function in current version of dragon 
+# Build the full oxygen network. Returns a LIST with various important stuff.
+dragon:::initialize_network(elements_of_interest = "O") -> full_oxygen
+
+# The important stuff is in `$edges` and `$locality_info` names
+oxygen_edges <- full_oxygen$edges 
+oxygen_locality <- full_oxygen$locality_info 
+
+# How many elements does Oxygen form minerals with?
+oxygen_edges %>%
+  dplyr::select(to) %>%
+  dplyr::distinct() %>%
+  dplyr::filter(to != "O") %>%
+  nrow()
+
+# How many minerals does Oxygen form?
+oxygen_edges %>%
+  dplyr::select(from) %>%
+  dplyr::distinct() %>%
+  nrow()
+
+# At how many localities? Eli's spreadsheet is wrong since it's TOTAL and not distinct.
+oxygen_locality %>%
+  # mindat_id column represents unique ID for localities
+  dplyr::select(mindat_id) %>%
+  dplyr::distinct() %>%
+  nrow()
+```
+
+**Our goal is to do the above for ALL ELEMENTS and create a single tibble with this information.** Each row should be a single element, and there should be four columns (element, num_elements, num_minerals, num_localities). To do this _modularly_, we need to write a **function**. 
