@@ -1,7 +1,6 @@
 ---
-title: "Data analysis"
-author: "Stephanie J. Spielman"
-date: "5/12/2021"
+title: "Dragon element data analysis"
+author: "Stephanie J. Spielman and Naman Srivastava"
 output: 
   html_document:
     theme: united
@@ -14,38 +13,70 @@ library(tidyverse)
 library(dragon)
 
 # Information about elements that may be needed eventually
-elements <- dragon:::element_info
+dragon:::element_info %>%
+  # Not present since 4.33 Ga
+  filter(element != "Tc") -> elements
 ```
 
 
-```{r oxygen_network}
-# Need to use with THREE COLONS with this function in current version of dragon 
-# Build the full oxygen network. Returns a LIST with various important stuff.
-dragon:::initialize_network(elements_of_interest = "O") -> full_oxygen
-
-# The important stuff is in `$edges` and `$locality_info` names
-oxygen_edges <- full_oxygen$edges 
-oxygen_locality <- full_oxygen$locality_info 
-
-# How many elements does Oxygen form minerals with?
-oxygen_edges %>%
-  dplyr::select(to) %>%
-  dplyr::distinct() %>%
-  dplyr::filter(to != "O") %>%
-  nrow()
-
-# How many minerals does Oxygen form?
-oxygen_edges %>%
-  dplyr::select(from) %>%
-  dplyr::distinct() %>%
-  nrow()
-
-# At how many localities? Eli's spreadsheet is wrong since it's TOTAL and not distinct.
-oxygen_locality %>%
-  # mindat_id column represents unique ID for localities
-  dplyr::select(mindat_id) %>%
-  dplyr::distinct() %>%
-  nrow()
+```{r element_network_function}
+# Function to build a network for a given element, considering only < 4.34 Ga
+parse_element_network <- function(element)
+{
+  # Build the full oxygen network. Returns a LIST with various important stuff.
+  # remember 3 colons
+  dragon:::initialize_network(elements_of_interest = element, 
+                              # age_range is inclusive and we don't want =4.34, so this is hopefully good enough.
+                              age_range = c(4.33, 0)) -> full_oxygen
+  
+  # The important stuff is in `$edges` and `$locality_info` names
+  oxygen_edges <- full_oxygen$edges 
+  oxygen_locality <- full_oxygen$locality_info 
+  
+  # How many elements does element form minerals with?
+  oxygen_edges %>%
+    dplyr::select(to) %>%
+    dplyr::distinct() %>%
+    dplyr::filter(to != element) %>% # not self
+    nrow() -> n_elements
+  
+  # How many minerals does element form?
+  oxygen_edges %>%
+    dplyr::select(from) %>%
+    dplyr::distinct() %>%
+    nrow() -> n_minerals
+  
+  # At how many localities? 
+  oxygen_locality %>%
+    # mindat_id column represents unique ID for localities
+    dplyr::select(mindat_id) %>%
+    dplyr::distinct() %>%
+    nrow() -> n_localities
+  
+  # whatever is written last in the function body gets returned
+  c("element" = element,
+    "n_elements" = n_elements,
+    "n_minerals" = n_minerals,
+    "n_localities" = n_localities)
+}
 ```
 
-**Our goal is to do the above for ALL ELEMENTS and create a single tibble with this information.** Each row should be a single element, and there should be four columns (element, num_elements, num_minerals, num_localities). To do this _modularly_, we need to write a **function**. 
+
+```{r build_all_networks, message=FALSE}
+# Makes a tibble with four columns:
+## element
+## n_elements (excludes self!!)
+## n_minerals
+## n_localities
+purrr::map_df(elements$element, parse_element_network) -> element_networks
+
+element_networks %>%
+  left_join(elements) -> element_networks_info
+
+element_networks_info
+```
+
+## minerals against elements 
+
+## localities against elements
+
