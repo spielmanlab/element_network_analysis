@@ -11,6 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dragon)
+library(ggrepel)
 
 # Information about elements that may be needed eventually
 dragon:::element_info %>%
@@ -76,7 +77,37 @@ element_networks %>%
 element_networks_info
 ```
 
-## minerals against elements 
+## Minerals against Elements 
+```{r minerals against elements plot}
 
-## localities against elements
+ggplot(element_networks_info)+
+  aes(y=as.numeric(as.character(n_minerals)),
+      x= as.numeric(as.character(n_elements)),
+      label = element)+
+  geom_point()+
+  labs(x = "Number of Elements", #Y-axis label
+       y = "Number of Minerals")+ #X-axis label
+  scale_x_continuous(breaks=seq(0,80,10))+
+  scale_y_log10()+
+  geom_text_repel()+
+  theme_bw()
+  
+```
 
+
+## Localities against Elements
+```{r localities against elements plot}
+
+ggplot(element_networks_info)+
+  aes(y=as.numeric(as.character(n_localities)),
+      x= as.numeric(as.character(n_elements)),
+      label = element)+
+  geom_point()+
+  labs(x = "Number of Elements", #Y-axis label
+       y = "Number of Localities")+ #X-axis label
+  scale_x_continuous(breaks=seq(0,80,10))+
+  scale_y_log10()+
+  geom_text_repel()+
+  theme_bw()
+
+```
