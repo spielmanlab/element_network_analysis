@@ -145,7 +145,8 @@ ggplot(element_networks_info)+
   scale_y_log10()+
   #geom_text_repel()+
   annotate("text", x = 7.5, y = 1850, label = mineral_r2, color = "red")+
-  theme_bw()
+  theme_bw()+
+  geom_smooth(method = lm)
 ```
 
 ## Localities against Elements
@@ -168,5 +169,6 @@ ggplot(element_networks_info)+
   scale_y_log10()+
   #geom_text_repel()+
   annotate("text", x = 7.5, y = 1850, label = localities_r2, color = "red")+
-  theme_bw()
+  theme_bw()+
+  geom_smooth(method = lm)
 ```
