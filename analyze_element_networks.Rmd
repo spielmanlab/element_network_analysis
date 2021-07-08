@@ -168,7 +168,36 @@ ggplot(element_networks_info)+
   scale_x_continuous(breaks=seq(0,80,10))+
   scale_y_log10()+
   #geom_text_repel()+
-  annotate("text", x = 7.5, y = 1850, label = localities_r2, color = "red")+
+  annotate("text", x = 7.5, y = 18500, label = localities_r2, color = "red")+
   theme_bw()+
   geom_smooth(method = lm)
 ```
+
+## Localities against Elements
+```{r localities against minerals plot}
+# regression
+#   y         ~ x          , data = dataframe x/y are in
+lm(n_localities ~ n_minerals, data = element_networks_info) -> localities_with_minerals_fitted_model
+get_model_formula(localities_with_minerals_fitted_model) -> localities_with_minerals_formula
+get_model_r2(localities_with_minerals_fitted_model) -> localities_with_minerals_r2
+
+ggplot(element_networks_info)+
+  aes(y=n_localities,
+      x= n_minerals)+
+      #label = element)+
+  geom_point()+
+  labs(x = "Number of Minerals", #Y-axis label
+       y = "Number of Localities", #X-axis label
+       title = "Number of minerals versus the number of localities", 
+       subtitle = localities_with_minerals_formula)+ 
+  scale_x_log10()+
+  scale_y_log10()+
+  #geom_text_repel()+
+  annotate("text", x = 5, y = 17500, label = localities_r2, color = "red")+
+  theme_bw()+
+  geom_smooth(method = lm)
+
+#print(localities_with_minerals_formula)
+
+```
+
