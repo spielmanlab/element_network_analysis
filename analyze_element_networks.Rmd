@@ -5,6 +5,8 @@ output:
   html_document:
     theme: united
     highlight: pygments
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +16,6 @@ library(dragon)
 library(ggrepel)
 library(broom)
 
-install.packages("dragon")
 # Information about elements that may be needed eventually
 dragon:::element_info %>%
   # Not present since 4.33 Ga
@@ -120,32 +121,47 @@ element_networks_info
 ```
 
 ## Minerals against Elements 
+```{r minerals against elements model}
+# regression
+
+par(mfrow=c(2,2))
+#   y         ~ x          , data = dataframe x/y are in
+lm(n_minerals ~ n_elements, data = element_networks_info) -> mineral_fitted_model
+qqnorm(mineral_fitted_model$residuals, main = "Linear space", pch=20) 
+qqline(mineral_fitted_model$residuals, col = "red") 
+
+lm(log(n_minerals) ~ n_elements, data = element_networks_info) -> mineral_fitted_model2
+qqnorm(mineral_fitted_model2$residuals, main = "Log minerals only", pch=20) 
+qqline(mineral_fitted_model2$residuals, col = "red")
+
+lm(log(n_minerals) ~ log(n_elements), data = element_networks_info) -> mineral_fitted_model3
+qqnorm(mineral_fitted_model3$residuals, main = "Log-log", pch=20) 
+qqline(mineral_fitted_model3$residuals, col = "red")
+
+
+lm(n_minerals ~ log(n_elements), data = element_networks_info) -> mineral_fitted_model4
+qqnorm(mineral_fitted_model4$residuals, main = "Log elements only", pch=20) 
+qqline(mineral_fitted_model4$residuals, col = "red")
+
+dev.off()
+```
+
 ```{r minerals against elements plot}
-# regression
-#   y         ~ x          , data = dataframe x/y are in
-lm(n_minerals ~ n_elements, data = element_networks_info) -> mineral_fitted_model
-get_model_formula(mineral_fitted_model) -> mineral_formula
-get_model_r2(mineral_fitted_model) -> mineral_r2 # this has to go somewhere??? 
 
-# regression
-#   y         ~ x          , data = dataframe x/y are in
-lm(n_minerals ~ n_elements, data = element_networks_info) -> mineral_fitted_model
-get_model_formula(mineral_fitted_model) -> mineral_formula
-get_model_r2(mineral_fitted_model) -> mineral_r2 # this has to go somewhere??? 
-
+get_model_formula(mineral_fitted_model2) -> mineral_formula
+get_model_r2(mineral_fitted_model2) -> mineral_r2 # this has to go somewhere??? 
 ggplot(element_networks_info)+
-  aes(y=n_minerals,
+  aes(y= log(n_minerals), # transform the data - NOT THE SCALE!
       x= n_elements)+
       #label = element)+
   geom_point()+
   labs(x = "Number of Elements", #Y-axis label
-       y = "Number of Minerals", 
+       y = "Log Number of Minerals", 
        title = "Relationship between number of elements and minerals they form", 
        subtitle = mineral_formula)+ #X-axis label
   scale_x_continuous(breaks=seq(0,80,10))+
-  scale_y_log10()+
   #geom_text_repel()+
-  annotate("text", x = 7.5, y = 1850, label = mineral_r2, color = "red")+
+  annotate("text", x = 7.5, y = log(1850), label = mineral_r2, color = "red")+
   theme_bw()+
   geom_smooth(method = lm)
 ```
