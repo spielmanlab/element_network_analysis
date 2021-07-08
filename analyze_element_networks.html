@@ -294,7 +294,7 @@ pre code {
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Build the full oxygen network. Returns a LIST with various important stuff.</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># remember 3 colons</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  dragon<span class="sc">:::</span><span class="fu">initialize_network</span>(<span class="at">elements_of_interest =</span> element, </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  dragon<span class="sc">::</span><span class="fu">initialize_network</span>(<span class="at">elements_of_interest =</span> element, </span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                              <span class="co"># age_range is inclusive and we don&#39;t want =4.34, so this is hopefully good enough.</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                              <span class="at">age_range =</span> <span class="fu">c</span>(<span class="fl">4.33</span>, <span class="dv">0</span>)) <span class="ot">-&gt;</span> full_oxygen</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  </span>
@@ -341,7 +341,7 @@ pre code {
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">n_localities =</span> <span class="fu">as.numeric</span>(n_localities)) <span class="ot">-&gt;</span> element_networks_info</span>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>element_networks_info</span></code></pre></div>
-<pre><code>## # A tibble: 73 x 15
+<pre><code>## # A tibble: 73 x 16
 ##    element n_elements n_minerals n_localities element_name element_hsab
 ##    &lt;chr&gt;        &lt;dbl&gt;      &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;        &lt;chr&gt;       
 ##  1 Ag              28        172         3166 Silver       Soft acid   
@@ -354,11 +354,11 @@ pre code {
 ##  8 Bi              40        212         1821 Bismuth      Int. acid   
 ##  9 Br              15         13           88 Bromine      Soft base   
 ## 10 C               50        417         9650 Carbon       Soft base   
-## # ... with 63 more rows, and 9 more variables: atomic_mass &lt;dbl&gt;,
+## # ... with 63 more rows, and 10 more variables: atomic_mass &lt;dbl&gt;,
 ## #   number_of_protons &lt;dbl&gt;, element_table_period &lt;dbl&gt;,
 ## #   element_table_group &lt;dbl&gt;, atomic_radius &lt;dbl&gt;, pauling &lt;dbl&gt;,
 ## #   element_metal_type &lt;chr&gt;, element_density &lt;dbl&gt;,
-## #   element_specific_heat &lt;dbl&gt;</code></pre>
+## #   element_specific_heat &lt;dbl&gt;, element_crust_percent_weight &lt;dbl&gt;</code></pre>
 <div id="minerals-against-elements" class="section level2">
 <h2>Minerals against Elements</h2>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># regression</span></span>
