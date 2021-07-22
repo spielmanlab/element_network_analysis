@@ -105,7 +105,7 @@ parse_element_network <- function(element)
 }
 
 
-parse_element_network("Cd")
+parse_element_network("H")
 
 ```
 
@@ -170,8 +170,8 @@ ggplot(element_networks_info)+
   annotate("text", x = 7.5, y = log(1850), label = mineral_r2, color = "red")+
   theme_bw()+
   theme(text = element_text(size = 13))+
-  geom_smooth(method = lm) -> Mineral_Plot
-  ggsave("Mineral_Plot.png", Mineral_Plot, width = 7, height = 5)
+  geom_smooth(method = lm)
+
 ```
 
 ## Localities against Elements
@@ -196,11 +196,11 @@ ggplot(element_networks_info)+
   annotate("text", x = 7.5, y = 18500, label = localities_r2, color = "red")+
   theme_bw()+
   theme(text = element_text(size = 13))+
-  geom_smooth(method = lm) -> Localities_Plot
-  ggsave("Localities_Plot.png", Localities_Plot, width = 7, height = 5)
+  geom_smooth(method = lm)
+
 ```
 
-## Localities against Elements
+## Localities against Minerals
 ```{r localities against minerals plot}
 # regression
 #   y         ~ x          , data = dataframe x/y are in
