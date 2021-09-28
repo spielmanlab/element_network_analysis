@@ -10,221 +10,297 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 library(tidyverse)
 library(dragon)
-library(ggrepel)
+#library(ggrepel)
 library(broom)
 library(performance)
-library(see)
-library(qqplotr)
-# Information about elements that may be needed eventually
+library(ggtext)
+
+theme_set(theme_classic() + theme(plot.subtitle = element_markdown()))
+
+source("utils.R")
 dragon:::element_info %>%
   # Not present since 4.33 Ga
   filter(element != "Tc") -> elements
 ```
 
-```{r model_functions}
-# Define functions that will be used to parse linear models
-
-# Return the R^2
-get_model_r2 <- function(fitted_model)
-{
-  broom::glance(fitted_model) %>%
-    pull(r.squared) %>%
-    round(3)
-}
-
-get_model_formula <- function(fitted_model)
-{
-  broom::tidy(fitted_model) -> coefficients
-  # Get coefficients into their own variables
-  coefficients %>%
-    filter(term == "n_elements") %>%
-    pull(estimate) -> slope
-  coefficients %>%
-    filter(term == "(Intercept)") %>%
-    pull(estimate) -> yint
-  # Are we subtracting or adding the y intercept?
-  if (yint >= 0)
-  {
-    sign <- " + "
-  } else {
-    sign <- " - "
-  }
-  
-  # Get the formula as a string
-  formula <- glue::glue(
-              "Y = ",
-              {round(slope, 3)}, "X", 
-              {sign}, {abs(round(yint, 3))}
-              )
-  formula
-}
-```
-
-```{r element_network_function}
-# Function to build a network for a given element, considering only < 4.34 Ga
-parse_element_network <- function(element)
-{
-  # Build the full oxygen network. Returns a LIST with various important stuff.
-  # remember 3 colons
-  dragon::initialize_network(elements_of_interest = element, 
-                              # age_range is inclusive and we don't want =4.34, so this is hopefully good enough.
-                              age_range = c(4.33, 0)) -> full_oxygen
-  
-  # The important stuff is in `$edges` and `$locality_info` names
-  oxygen_edges <- full_oxygen$edges 
-  oxygen_locality <- full_oxygen$locality_info 
-  
-  # How many elements does element form minerals with?
-  oxygen_edges %>%
-    dplyr::select(to) %>%
-    dplyr::distinct() %>%
-    dplyr::filter(to != element) %>% # not self
-    nrow() -> n_elements
-  
-  # How many minerals does element form?
-  oxygen_edges %>%
-    dplyr::select(from) %>%
-    dplyr::distinct() %>%
-    nrow() -> n_minerals
-  
-  # At how many localities? 
-  oxygen_locality %>%
-    # mindat_id column represents unique ID for localities
-    dplyr::select(mindat_id) %>%
-    dplyr::distinct() %>%
-    nrow() -> n_localities
-  
-  # whatever is written last in the function body gets returned
-  c("element" = element,
-    "n_elements" = n_elements,
-    "n_minerals" = n_minerals,
-    "n_localities" = n_localities)
-}
 
 
-parse_element_network("H")
+First, we create a dataset containing element network information joined with other attributes of elements. We specifically _only consider elements that are known to form at least five minerals on Earth since 4.33 Ga._ The following elements are therefore excluded (in parentheses is given the number of minerals it forms): Dy (1), Er (1), Gd (1), Hf (1), Sm (1), Re (2), Rb (3). 
 
-```
+```{r build_all_networks}
+mineral_threshold <- 5
 
-
-```{r build_all_networks, message=FALSE}
-# Makes a tibble with four columns:
-## element
-## n_elements (excludes self!!)
-## n_minerals
-## n_localities
-purrr::map_df(elements$element, parse_element_network) -> element_networks
-element_networks %>%
+purrr::map_df(elements$element, parse_element_network) %>%
   left_join(elements) %>%
   mutate(n_elements = as.numeric(n_elements),
          n_minerals = as.numeric(n_minerals),
-         n_localities = as.numeric(n_localities)) -> element_networks_info
+         n_localities = as.numeric(n_localities)) %>%
+  filter(n_minerals >= mineral_threshold) -> element_networks_info
 
 element_networks_info
 ```
 
-## Minerals against Elements 
-```{r minerals against elements model}
+### Analysis 1: What is the relationship between number of elements interacted with and number of minerals formed?
+
+
+<br>
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
+<br>
+
+```{r model1_diagnose, fig.height=8, fig.width=8}
 # regression
 
-par(mfrow=c(2,2))
-#   y         ~ x          , data = dataframe x/y are in
-lm(n_minerals ~ n_elements, data = element_networks_info) -> mineral_fitted_model
-qqnorm(mineral_fitted_model$residuals, main = "Linear space", pch=20) 
-qqline(mineral_fitted_model$residuals, col = "red") 
+# No
+#lm(n_minerals ~ n_elements, data = element_networks_info) -> model_plain
+#performance::check_model(model_plain)
 
-lm(log(n_minerals) ~ n_elements, data = element_networks_info) -> mineral_fitted_model2
-qqnorm(mineral_fitted_model2$residuals, main = "Log minerals only", pch=20) 
-qqline(mineral_fitted_model2$residuals, col = "red")
+# Yes
+lm(log(n_minerals) ~ n_elements, data = element_networks_info) -> model_ylog
+performance::check_model(model_ylog)
 
-lm(log(n_minerals) ~ log(n_elements), data = element_networks_info) -> mineral_fitted_model3
-qqnorm(mineral_fitted_model3$residuals, main = "Log-log", pch=20) 
-qqline(mineral_fitted_model3$residuals, col = "red")
+# No
+#lm(n_minerals ~ log(n_elements), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
 
-
-lm(n_minerals ~ log(n_elements), data = element_networks_info) -> mineral_fitted_model4
-qqnorm(mineral_fitted_model4$residuals, main = "Log elements only", pch=20) 
-qqline(mineral_fitted_model4$residuals, col = "red")
-
-dev.off()
+# No
+#lm(log(n_minerals) ~ log(n_elements), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
 ```
 
-```{r minerals against elements plot}
 
-get_model_formula(mineral_fitted_model2) -> mineral_formula
-get_model_r2(mineral_fitted_model2) -> mineral_r2 # this has to go somewhere??? 
-ggplot(element_networks_info)+
-  aes(y= log(n_minerals), # transform the data - NOT THE SCALE!
-      x= n_elements)+
-      #label = element)+
-  geom_point()+
-  labs(x = "Number of Elements", #Y-axis label
+<br><br>
+
+**The resulting model is as follows - _THERE IS A POSITIVE RELATIONSHIP._**
+
+
+```{r model1_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_ylog, "n_elements") -> model_info
+
+element_networks_info %>%
+  mutate(n_minerals_log = log(n_minerals)) %>%
+  ggplot() +
+  aes(y = n_minerals_log,
+      x = n_elements) +
+  geom_point() +
+  labs(x = "Number of Elements",
        y = "Log Number of Minerals", 
-       title = "Relationship between number of elements and minerals they form", 
-       subtitle = mineral_formula)+ #X-axis label
-  scale_x_continuous(breaks=seq(0,80,10))+
-  #geom_text_repel()+
-  annotate("text", x = 7.5, y = log(1850), label = mineral_r2, color = "red")+
-  theme_bw()+
-  theme(text = element_text(size = 13))+
-  geom_smooth(method = lm)
-
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
 ```
 
-## Localities against Elements
-```{r localities against elements plot}
+
+
+
+### Analysis 2: What is the relationship between number of elements interacted with and number of localities it is found at?
+
+
+<br>
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
+<br>
+
+```{r model2_diagnose, fig.height=8, fig.width=8}
 # regression
-#   y         ~ x          , data = dataframe x/y are in
-lm(n_localities ~ n_elements, data = element_networks_info) -> localities_fitted_model
-get_model_formula(localities_fitted_model) -> localities_formula
-get_model_r2(localities_fitted_model) -> localities_r2 # this has to go somewhere??? 
-ggplot(element_networks_info)+
-  aes(y=n_localities,
-      x= n_elements)+
-      #label = element)+
-  geom_point()+
-  labs(x = "Number of Elements", #Y-axis label
-       y = "Number of Localities", #X-axis label
-       title = "Relationship between number of elements and localities", 
-       subtitle = localities_formula)+ 
-  scale_x_continuous(breaks=seq(0,80,10))+
-  scale_y_log10()+
-  #geom_text_repel()+
-  annotate("text", x = 7.5, y = 18500, label = localities_r2, color = "red")+
-  theme_bw()+
-  theme(text = element_text(size = 13))+
-  geom_smooth(method = lm)
 
+# No
+#lm(n_localities ~ n_elements, data = element_networks_info) -> model_plain
+#performance::check_model(model_plain)
+
+# Yes
+lm(log(n_localities) ~ n_elements, data = element_networks_info) -> model_ylog
+performance::check_model(model_ylog)
+
+# No
+#lm(n_localities ~ log(n_elements), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
+
+# No
+#lm(log(n_localities) ~ log(n_elements), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
 ```
 
-## Localities against Minerals
-```{r localities against minerals plot}
+
+<br><br>
+
+**The resulting model is as follows - _THERE IS A POSITIVE RELATIONSHIP._**
+
+```{r model2_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_ylog, "n_elements") -> model_info
+
+element_networks_info %>%
+  mutate(n_localities_log = log(n_localities)) %>%
+  ggplot() +
+  aes(y = n_localities_log,
+      x = n_elements) +
+  geom_point() +
+  labs(x = "Number of Elements",
+       y = "Log Number of Localities", 
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
+```
+
+
+
+
+### Analysis 3: What is the relationship between number of elements interacted with and percentage of crust?
+
+> Note that there are six elements which do not appear in this analysis because they are missing crust data - C, H, N, REE (rare earth elements), Rh, Te.
+
+<br>
+
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
+
+<br>
+
+```{r model3_diagnose, fig.height=8, fig.width=8}
 # regression
-#   y         ~ x          , data = dataframe x/y are in
-lm(n_localities ~ n_minerals, data = element_networks_info) -> localities_with_minerals_fitted_model
-get_model_formula(localities_with_minerals_fitted_model) -> localities_with_minerals_formula
-get_model_r2(localities_with_minerals_fitted_model) -> localities_with_minerals_r2
 
-ggplot(element_networks_info)+
-  aes(y=n_localities,
-      x= n_minerals)+
-      #label = element)+
-  geom_point()+
-  labs(x = "Number of Minerals", #Y-axis label
-       y = "Number of Localities", #X-axis label
-       title = "Number of minerals versus the number of localities", 
-       subtitle = localities_with_minerals_formula)+ 
-  scale_x_log10()+
-  scale_y_log10()+
-  #geom_text_repel()+
-  annotate("text", x = 5, y = 17500, label = localities_r2, color = "red")+
-  theme_bw()+
-  geom_smooth(method = lm)
+# No
+#lm(element_crust_percent_weight ~ n_elements, data = element_networks_info) -> model_plain
+#performance::check_model(model_plain)
 
-#print(localities_with_minerals_formula)
+# Yes
+lm(log(element_crust_percent_weight) ~ n_elements, data = element_networks_info) -> model_ylog
+performance::check_model(model_ylog)
 
+# No
+#lm(element_crust_percent_weight ~ log(n_elements), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
+
+# No
+#lm(log(element_crust_percent_weight) ~ log(n_elements), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
 ```
 
+
+
+
+<br><br>
+
+**The resulting model is as follows - _THERE IS A POSITIVE RELATIONSHIP._**
+
+```{r model3_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_ylog, "n_elements") -> model_info
+
+element_networks_info %>%
+  mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) %>%
+  ggplot() +
+  aes(y = element_crust_percent_weight_log,
+      x = n_elements) +
+  geom_point() +
+  labs(x = "Number of Elements",
+       y = "Log crust percentage", 
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
+```
+
+
+
+### Analysis 4: What is the relationship between number of elements interacted with and electronegativity?
+
+
+<br>
+
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _both untransformed y and x_, whose diagnostics best meet assumptions.
+
+<br>
+
+```{r model4_diagnose, fig.height=8, fig.width=8}
+# Yes
+lm(pauling ~ n_elements, data = element_networks_info) -> model_plain
+performance::check_model(model_plain)
+
+# No
+#lm(log(pauling) ~ n_elements, data = element_networks_info) -> model_ylog
+#performance::check_model(model_ylog)
+
+# No
+#lm(pauling ~ log(n_elements), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
+
+# No
+#lm(log(pauling) ~ log(n_elements), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
+```
+
+
+
+
+
+<br><br>
+
+**The resulting model is as follows - _THERE IS NO RELATIONSHIP._:**
+
+```{r model4_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_plain, "n_elements") -> model_info
+
+element_networks_info %>%
+  ggplot() +
+  aes(y = pauling,
+      x = n_elements) +
+  geom_point() +
+  labs(x = "Number of Elements",
+       y = "Pauling electronegativity", 
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
+```
+
+
+
+
+
+
+### Analysis 5: What is the relationship between number of minerals formed and electronegativity?
+
+
+<br>
+
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
+
+<br>
+
+```{r model5_diagnose, fig.height=8, fig.width=8}
+
+# No
+#lm(n_minerals ~ pauling, data = element_networks_info) -> model_plain
+#performance::check_model(model_plain)
+
+# Yes
+lm(log(n_minerals) ~ pauling, data = element_networks_info) -> model_ylog
+performance::check_model(model_ylog)
+
+# No
+#lm(n_minerals ~ log(pauling), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
+
+# No but close
+#lm(log(pauling) ~ log(n_minerals), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
+```
+
+
+<br><br>
+
+**The resulting model is as follows - _THERE IS NO RELATIONSHIP._**
+
+```{r model5_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_ylog, "pauling") -> model_info
+
+element_networks_info %>%
+  mutate(n_minerals_log = log(n_minerals)) %>%
+  ggplot() +
+  aes(y = n_minerals_log,
+      x = pauling) +
+  geom_point() +
+  labs(x = "Pauling electronegativity",
+       y = "Log number of minerals formed", 
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
+```
