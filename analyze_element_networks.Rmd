@@ -14,7 +14,6 @@ editor_options:
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 library(tidyverse)
 library(dragon)
-#library(ggrepel)
 library(broom)
 library(performance)
 library(ggtext)
@@ -153,7 +152,7 @@ element_networks_info %>%
 
 <br>
 
-First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log x and untransformed y_, whose diagnostics best meet assumptions.
 
 <br>
 
@@ -161,19 +160,19 @@ First, we explore whether we should likely transform an axis on a log-scale. Mod
 # regression
 
 # No
-#lm(element_crust_percent_weight ~ n_elements, data = element_networks_info) -> model_plain
+#lm(n_elements ~ element_crust_percent_weight, data = element_networks_info) -> model_plain
 #performance::check_model(model_plain)
 
-# Yes
-lm(log(element_crust_percent_weight) ~ n_elements, data = element_networks_info) -> model_ylog
+# No
+#lm(log(n_elements) ~ element_crust_percent_weight, data = element_networks_info) -> model_ylog
 performance::check_model(model_ylog)
 
-# No
-#lm(element_crust_percent_weight ~ log(n_elements), data = element_networks_info) -> model_xlog
-#performance::check_model(model_xlog)
+# Yes
+lm(n_elements ~ log(element_crust_percent_weight), data = element_networks_info) -> model_xlog
+performance::check_model(model_xlog)
 
 # No
-#lm(log(element_crust_percent_weight) ~ log(n_elements), data = element_networks_info) -> model_xlog_ylog
+#lm(log(n_elements) ~ log(element_crust_percent_weight), data = element_networks_info) -> model_xlog_ylog
 #performance::check_model(model_xlog_ylog)
 ```
 
@@ -185,17 +184,21 @@ performance::check_model(model_ylog)
 **The resulting model is as follows - _THERE IS A POSITIVE RELATIONSHIP._**
 
 ```{r model3_plot, fig.height=4, fig.width=6}
+# Since we have a logged x, have to remake model:
+element_networks_info %>%
+  mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) -> forfit
+lm(n_elements ~ element_crust_percent_weight_log, data = forfit) -> model_xlog
 
-get_model_info(model_ylog, "n_elements") -> model_info
+get_model_info(model_xlog, "element_crust_percent_weight_log") -> model_info
 
 element_networks_info %>%
   mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) %>%
   ggplot() +
-  aes(y = element_crust_percent_weight_log,
-      x = n_elements) +
+  aes(y = n_elements,
+      x = element_crust_percent_weight_log) +
   geom_point() +
-  labs(x = "Number of Elements",
-       y = "Log crust percentage", 
+  labs(y = "Number of Elements",
+       x = "Log crust percentage", 
        subtitle = model_info) +
   geom_smooth(method = "lm") 
 ```
