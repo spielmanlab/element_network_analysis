@@ -26,7 +26,9 @@ dragon:::element_info %>%
   filter(element != "Tc") -> elements
 ```
 
+<br><br>
 
+### Data preparation
 
 First, we create a dataset containing element network information joined with other attributes of elements. We specifically _only consider elements that are known to form at least five minerals on Earth since 4.33 Ga._ The following elements are therefore excluded (in parentheses is given the number of minerals it forms): Dy (1), Er (1), Gd (1), Hf (1), Sm (1), Re (2), Rb (3). 
 
@@ -43,7 +45,7 @@ purrr::map_df(elements$element, parse_element_network) %>%
 element_networks_info
 ```
 
-### Analysis 1: What is the relationship between number of elements interacted with and number of minerals formed?
+### Analysis 1: What is the relationship between number of elements interacted with and number of minerals formed? This analysis asks if number of elements can explain number of minerals.
 
 
 <br>
@@ -95,7 +97,7 @@ element_networks_info %>%
 
 
 
-### Analysis 2: What is the relationship between number of elements interacted with and number of localities it is found at?
+### Analysis 2: What is the relationship between number of elements interacted with and number of localities it is found at? This analysis asks if number of elements can explain number of localities.
 
 
 <br>
@@ -146,7 +148,7 @@ element_networks_info %>%
 
 
 
-### Analysis 3: What is the relationship between number of elements interacted with and percentage of crust?
+### Analysis 3: What is the relationship between number of elements interacted with and percentage of crust? This analysis asks if element crust percentage by weight can explain the number of elements.
 
 > Note that there are six elements which do not appear in this analysis because they are missing crust data - C, H, N, REE (rare earth elements), Rh, Te.
 
@@ -205,7 +207,7 @@ element_networks_info %>%
 
 
 
-### Analysis 4: What is the relationship between number of elements interacted with and electronegativity?
+### Analysis 4: What is the relationship between number of elements interacted with and electronegativity? This analysis asks if the number of elements can explain the electronegativity.
 
 
 <br>
@@ -260,7 +262,7 @@ element_networks_info %>%
 
 
 
-### Analysis 5: What is the relationship between number of minerals formed and electronegativity?
+### Analysis 5: What is the relationship between number of minerals formed and electronegativity? This analysis asks if the number of minerals can explain electronegativity.
 
 
 <br>
@@ -309,8 +311,7 @@ element_networks_info %>%
   geom_smooth(method = "lm") 
 ```
 
-### Analysis 6: Can the atomic number (number of protons) explain the number of elements interacted with?
-
+### Analysis 6: What is the relationship between atomic number (number of protons) and the number of elements interacted with? This analysis asks if the atomic number (number of protons) can explain the number of elements interacted with.
 <br>
 
 First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _both axes untransformed_; all diagnostics are about the same, so we'll use the regular data.
