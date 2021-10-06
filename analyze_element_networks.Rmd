@@ -293,7 +293,7 @@ performance::check_model(model_ylog)
 
 **The resulting model is as follows - _THERE IS NO RELATIONSHIP._**
 
-```{r model5_plot, fig.height=4, fig.width=6}
+```{r model_plot, fig.height=4, fig.width=6}
 
 get_model_info(model_ylog, "pauling") -> model_info
 
@@ -305,6 +305,53 @@ element_networks_info %>%
   geom_point() +
   labs(x = "Pauling electronegativity",
        y = "Log number of minerals formed", 
+       subtitle = model_info) +
+  geom_smooth(method = "lm") 
+```
+
+### Analysis 6: Can the atomic number (number of protons) explain the number of elements interacted with?
+
+<br>
+
+First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _both axes untransformed_; all diagnostics are about the same, so we'll use the regular data.
+
+<br>
+
+```{r model6_diagnose, fig.height=8, fig.width=8}
+
+# Yes
+lm(n_elements ~ number_of_protons, data = element_networks_info) -> model_plain
+performance::check_model(model_plain)
+
+# No
+#lm(log(n_elements) ~ number_of_protons, data = element_networks_info) -> model_ylog
+#performance::check_model(model_ylog)
+
+# No
+#lm(n_elements ~ log(number_of_protons), data = element_networks_info) -> model_xlog
+#performance::check_model(model_xlog)
+
+# No
+#lm(log(n_elements) ~ log(number_of_protons), data = element_networks_info) -> model_xlog_ylog
+#performance::check_model(model_xlog_ylog)
+```
+
+
+<br><br>
+
+**The resulting model is as follows - THERE IS A NEGATIVE RELATIONSHIP.**
+
+```{r model6_plot, fig.height=4, fig.width=6}
+
+get_model_info(model_plain, "number_of_protons") -> model_info
+
+element_networks_info %>%
+  ggplot() +
+  aes(y = number_of_protons,
+      x = n_elements) +
+  geom_point() +
+  labs(x = "Atomic number",
+       y = "Number of Elements", 
        subtitle = model_info) +
   geom_smooth(method = "lm") 
 ```
