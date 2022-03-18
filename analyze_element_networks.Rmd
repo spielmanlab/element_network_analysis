@@ -1,5 +1,5 @@
 ---
-title: "Dragon element data analysis"
+title: "Element network analysis with `dragon`"
 author: "Stephanie J. Spielman and Naman Srivastava"
 output: 
   html_document:
@@ -17,8 +17,19 @@ library(dragon)
 library(broom)
 library(performance)
 library(ggtext)
+library(ggrepel)
+library(cowplot)
 
 theme_set(theme_classic() + theme(plot.subtitle = element_markdown()))
+
+# ggrepel labeling
+label.color <- "darkgreen"
+label.size <- 4.5
+
+# output figure paths
+fig_dir <- "figures"
+ms_fig1_file <- file.path(fig_dir, "figure1.pdf")
+ms_fig2_file <- file.path(fig_dir, "figure2.pdf")
 
 source("utils.R")
 dragon:::element_info %>%
@@ -80,18 +91,23 @@ performance::check_model(model_ylog)
 
 ```{r model1_plot, fig.height=4, fig.width=6}
 
+
 get_model_info(model_ylog, "n_elements") -> model_info
 
-element_networks_info %>%
-  mutate(n_minerals_log = log(n_minerals)) %>%
-  ggplot() +
-  aes(y = n_minerals_log,
-      x = n_elements) +
-  geom_point() +
-  labs(x = "Number of Elements",
-       y = "Log Number of Minerals", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+
+make_plot(
+  element_networks_info %>% mutate(n_minerals_log = log(n_minerals)),
+  n_elements,
+  n_minerals_log,
+  model_info,
+  "Number of Elements",
+  "Log Number of Minerals",
+  c("C", "H", "O", "N", "P", "S"),
+  4 #seed
+) -> model1_plot
+
+
+model1_plot
 ```
 
 
@@ -131,18 +147,33 @@ performance::check_model(model_ylog)
 
 ```{r model2_plot, fig.height=4, fig.width=6}
 
+
 get_model_info(model_ylog, "n_elements") -> model_info
 
-element_networks_info %>%
-  mutate(n_localities_log = log(n_localities)) %>%
-  ggplot() +
-  aes(y = n_localities_log,
-      x = n_elements) +
-  geom_point() +
-  labs(x = "Number of Elements",
-       y = "Log Number of Localities", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+make_plot(
+  element_networks_info %>% mutate(n_localities_log = log(n_localities)),
+  n_elements,
+  n_localities_log,
+  model_info,
+  "Number of Elements",
+  "Log Number of Localities",
+  c("C", "H", "O", "N", "Au", "P"),
+  10
+) -> model2_plot
+
+# S and P have to be labeled separately
+model2_plot + 
+  geom_text(
+    aes(label = ifelse(element == "S", "S", "")),
+    nudge_y = 0.2,
+    nudge_x = -1,
+    fontface = "bold",
+    color = label.color,
+    size = label.size
+  ) 
+
+model2_plot
+
 ```
 
 
@@ -190,19 +221,45 @@ performance::check_model(model_xlog)
 element_networks_info %>%
   mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) -> forfit
 lm(n_elements ~ element_crust_percent_weight_log, data = forfit) -> model_xlog
-
 get_model_info(model_xlog, "element_crust_percent_weight_log") -> model_info
 
-element_networks_info %>%
-  mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) %>%
-  ggplot() +
-  aes(y = n_elements,
-      x = element_crust_percent_weight_log) +
-  geom_point() +
-  labs(y = "Number of Elements",
-       x = "Log crust percentage", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+
+make_plot(
+  element_networks_info %>% 
+    mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)),
+  element_crust_percent_weight_log,
+  n_elements,
+  model_info,
+  "Log crust percentage",
+  "Number of Elements",
+  c("As", "Pb", "Cu", "S", "O", "Fe", "Mn", "Zn", "P", "Mo", "Co", "Br", "Sc", "Yb", "Ga"),
+  11
+) -> model3_plot
+
+# P and Ni separately, except the bottom P just allows the first P....
+model3_plot + 
+  # This is an insane hack for P and I DO NOT REGRET IT!!
+  geom_text(
+    aes(label = ifelse(element == "P", "P", "")),
+    nudge_y = 2,
+    nudge_x = 0,
+    fontface = "bold",
+    color = "white",
+    size = label.size
+  ) +
+  geom_text(
+    aes(label = ifelse(element == "Ni", "Ni", "")),
+    nudge_y = -2.5,
+    nudge_x = -0.4,
+    fontface = "bold",
+    color = label.color,
+    size = label.size
+  )
+
+
+
+model3_plot
+
 ```
 
 
@@ -246,15 +303,22 @@ performance::check_model(model_plain)
 
 get_model_info(model_plain, "n_elements") -> model_info
 
-element_networks_info %>%
-  ggplot() +
-  aes(y = pauling,
-      x = n_elements) +
-  geom_point() +
-  labs(x = "Number of Elements",
-       y = "Pauling electronegativity", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+
+# No seed necessary since no labeling in this plot
+
+make_plot(
+  element_networks_info,
+  n_elements,
+  pauling,
+  model_info,
+  "Number of Elements",
+  "Pauling electronegativity",
+  c()
+) -> model4_plot
+
+
+
+model4_plot
 ```
 
 
@@ -299,16 +363,21 @@ performance::check_model(model_ylog)
 
 get_model_info(model_ylog, "pauling") -> model_info
 
-element_networks_info %>%
-  mutate(n_minerals_log = log(n_minerals)) %>%
-  ggplot() +
-  aes(y = n_minerals_log,
-      x = pauling) +
-  geom_point() +
-  labs(x = "Pauling electronegativity",
-       y = "Log number of minerals formed", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+# No seed necessary since no labeling in this plot
+
+make_plot(
+  element_networks_info %>% mutate(n_minerals_log = log(n_minerals)),
+  pauling,
+  n_minerals_log,
+  model_info,
+  "Pauling electronegativity",
+  "Log number of minerals formed",
+  c()
+) -> model5_plot
+
+
+
+model5_plot
 ```
 
 ### Analysis 6: What is the relationship between atomic number (number of protons) and the number of elements interacted with? This analysis asks if the atomic number (number of protons) can explain the number of elements interacted with.
@@ -346,13 +415,61 @@ performance::check_model(model_plain)
 
 get_model_info(model_plain, "number_of_protons") -> model_info
 
-element_networks_info %>%
-  ggplot() +
-  aes(y = number_of_protons,
-      x = n_elements) +
-  geom_point() +
-  labs(x = "Atomic number",
-       y = "Number of Elements", 
-       subtitle = model_info) +
-  geom_smooth(method = "lm") 
+# ggrepel seed
+set.seed(50)
+
+make_plot(
+  element_networks_info,
+  n_elements,
+  number_of_protons,
+  model_info,
+  "Number of Elements",
+  "Atomic number", # variable is number_of_protons which is equivalent
+   c("As", "Pb", "Cu", "S", "O", "Fe", "Mn", "P", "Zn", "Ni", "Co", "Br", "Sc", "Yb", "Ga", "C", "H", "N", "Bi", "U")
+) -> model6_plot
+
+# Mo is specifically annoying to label because it's ON the regression line
+model6_plot +
+  geom_text(
+    aes(label = ifelse(element == "Mo", "Mo", "")),
+    nudge_y = 3,
+    fontface = "bold",
+    color = label.color,
+    size = label.size) -> model6_plot
+model6_plot
+```
+
+<br><br>
+
+
+### Figure export
+
+Here we export figures to PDF files for use in manuscript.
+
+
+##### Manuscript Figure 1
+
+Figure 1 is two panels comprised of `model1_plot` and `model2_plot`.
+
+```{r ms_fig1}
+fig1_grid <- plot_grid(model1_plot, model2_plot, labels = "AUTO", nrow = 2)
+save_plot(ms_fig1_file, fig1_grid, base_height = 10, base_width = 7)
+```
+
+
+Figure 2 is two panels comprised of `model3_plot` and `model6_plot`.
+
+```{r ms_fig2}
+fig2_grid <- plot_grid(model3_plot, model6_plot, labels = "AUTO", nrow = 2)
+save_plot(ms_fig2_file, fig2_grid, base_height = 10, base_width = 7)
+```
+
+
+
+### Session Info
+
+The following shows the R version and package versions loaded for this analysis to enable reproducibility.
+
+```{r session_info}
+sessionInfo()
 ```

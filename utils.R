@@ -35,6 +35,33 @@ get_model_info <- function(fitted_model, x_term)
   )
 }
 
+# Make a scatterplot
+make_plot <- function(df, xvar, yvar, model_info, xlab, ylab, elements_to_label, repel_seed = 11) {
+  df %>% 
+    ggplot() +
+    aes(x = {{xvar}},
+        y = {{yvar}}) +
+    geom_point() +
+    labs(x = xlab,
+         y = ylab, 
+         subtitle = model_info) +
+    geom_smooth(method = "lm") -> p
+  
+  p + 
+    geom_text_repel(
+      aes(label = ifelse(element %in% elements_to_label, 
+                         element, 
+                         "")
+      ),
+      color = label.color,
+      size = label.size,
+      fontface = "bold",
+      min.segment.length = 0.0001,
+      seed = repel_seed
+    ) 
+}
+
+
 
 
 # Function to build a network for a given element, considering only < 4.34 Ga
