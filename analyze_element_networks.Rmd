@@ -22,6 +22,7 @@ library(performance)
 library(ggtext)
 library(ggrepel)
 library(cowplot)
+library(DT)
 
 theme_set(theme_classic() + theme(plot.subtitle = element_markdown()))
 
@@ -37,6 +38,8 @@ ms_fig2_file <- file.path(fig_dir, "figure2.pdf")
 #load utils
 source("utils.R")
 
+# prepared data file
+data_file <- "element_networks_info.csv"
 ```
 
 <br><br>
@@ -45,27 +48,36 @@ source("utils.R")
 
 First, we create a dataset containing element network information joined with other attributes of elements. We specifically _only consider elements that are known to form at least five minerals on Earth since 4.33 Ga._ The following elements are therefore excluded (in parentheses is given the number of minerals it forms): Dy (1), Er (1), Gd (1), Hf (1), Sm (1), Re (2), Rb (3). 
 
-```{r build_all_networks, include=FALSE}
-mineral_threshold <- 5
+```{r build_all_networks}
 
+# Prepare if file not present. Otherwise, read in the file.
+if (file.exists(data_file)) {
+  element_networks_info <- read_csv(data_file)
+} else {
+  mineral_threshold <- 5
 
-dragon:::element_info %>%
-  # Not present since 4.33 Ga
-  filter(element != "Tc") -> elements
+  dragon:::element_info %>%
+    # Remove those not present **since** 4.33 Ga
+    filter(element != "Tc") -> elements
+  
+  purrr::map_df(elements$element, parse_element_network) %>%
+    left_join(elements) %>%
+    mutate(n_elements = as.numeric(n_elements),
+           n_minerals = as.numeric(n_minerals),
+           n_localities = as.numeric(n_localities)) %>%
+    filter(n_minerals >= mineral_threshold) -> element_networks_info
+  
+  # Save to file
+  write_csv(element_networks_info, data_file)
+}
 
-purrr::map_df(elements$element, parse_element_network) %>%
-  left_join(elements) %>%
-  mutate(n_elements = as.numeric(n_elements),
-         n_minerals = as.numeric(n_minerals),
-         n_localities = as.numeric(n_localities)) %>%
-  filter(n_minerals >= mineral_threshold) -> element_networks_info
 ```
 
 
 Here is the full dataset used for analysis:
 
-```{r element_networks_info}
-element_networks_info
+```{r reveal_element_networks_info}
+datatable(element_networks_info)
 ```
 
 <br><br>
@@ -77,7 +89,7 @@ element_networks_info
 First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
 <br>
 
-```{r model1_diagnose, fig.height=5, fig.width=5}
+```{r model1_diagnose, fig.height=6, fig.width=6}
 # regression
 
 # No
@@ -134,7 +146,7 @@ model1_plot
 First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
 <br>
 
-```{r model2_diagnose, fig.height=5, fig.width=5}
+```{r model2_diagnose, fig.height=6, fig.width=6}
 # regression
 
 # No
@@ -203,7 +215,7 @@ First, we explore whether we should likely transform an axis on a log-scale. Mod
 
 <br>
 
-```{r model3_diagnose, fig.height=5, fig.width=5}
+```{r model3_diagnose, fig.height=6, fig.width=6}
 # regression
 
 # No
@@ -287,7 +299,7 @@ First, we explore whether we should likely transform an axis on a log-scale. Mod
 
 <br>
 
-```{r model4_diagnose, fig.height=5, fig.width=5}
+```{r model4_diagnose, fig.height=6, fig.width=6}
 # Yes
 lm(pauling ~ n_elements, data = element_networks_info) -> model_plain
 performance::check_model(model_plain)
@@ -346,7 +358,7 @@ First, we explore whether we should likely transform an axis on a log-scale. Mod
 
 <br>
 
-```{r model5_diagnose, fig.height=5, fig.width=5}
+```{r model5_diagnose, fig.height=6, fig.width=6}
 
 # No
 #lm(n_minerals ~ pauling, data = element_networks_info) -> model_plain
@@ -396,7 +408,7 @@ First, we explore whether we should likely transform an axis on a log-scale. Mod
 
 <br>
 
-```{r model6_diagnose, fig.height=5, fig.width=5}
+```{r model6_diagnose, fig.height=6, fig.width=6}
 # Yes
 lm(n_elements ~ number_of_protons, data = element_networks_info) -> model_plain
 performance::check_model(model_plain)
