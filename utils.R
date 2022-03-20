@@ -36,7 +36,7 @@ get_model_info <- function(fitted_model, x_term)
 }
 
 # Make a scatterplot
-make_plot <- function(df, xvar, yvar, model_info, xlab, ylab, elements_to_label, repel_seed = 11) {
+make_plot <- function(df, xvar, yvar, model_info, xlab, ylab, elements_to_label = c(), repel_seed = 11) {
   df %>% 
     ggplot() +
     aes(x = {{xvar}},
