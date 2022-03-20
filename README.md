@@ -4,4 +4,4 @@ Code associated with manuscript **Mineral element insiders and outliers play cru
 
 Code written by [Stephanie J. Spielman](https://sjspielman.github.io) and [Naman Srivastava](https://github.com/namansri468). Contact Stephanie at `stephanie.spielman@gmail.com` with any questions.
 
-This [rendered notebook](https://htmlpreview.github.io/?https://github.com/spielmanlab/element_network_analysis/blob/main/analyze_element_networks.html) of [`analyze_element_networks.Rmd`](./analyze_element_networks.Rmd) contains data preparation for linear regressions and their associated visualizations.
+This [rendered notebook](https://spielmanlab.github.io/element_network_analysis) of [`analyze_element_networks.Rmd`](./analyze_element_networks.Rmd) contains data preparation for linear regressions and their associated visualizations.
