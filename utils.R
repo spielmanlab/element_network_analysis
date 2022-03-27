@@ -30,13 +30,18 @@ get_model_info <- function(fitted_model, x_term)
     pull(r.squared) %>%
     round(3) -> r2
   
-  glue::glue(
-    "{formula} (*R<sup>2</sup> = {r2}*)"
+  list(
+    formula =  glue::glue(
+      "{formula} (*R<sup>2</sup> = {r2}*)"
+      ),
+    pvalue = broom::glance(fitted_model) %>% pull(p.value)
   )
 }
 
+
+
 # Make a scatterplot
-make_plot <- function(df, xvar, yvar, model_info, xlab, ylab, elements_to_label = c(), repel_seed = 11) {
+make_plot <- function(df, xvar, yvar, model_formula, xlab, ylab) {
   df %>% 
     ggplot() +
     aes(x = {{xvar}},
@@ -44,23 +49,26 @@ make_plot <- function(df, xvar, yvar, model_info, xlab, ylab, elements_to_label 
     geom_point() +
     labs(x = xlab,
          y = ylab, 
-         subtitle = model_info) +
-    geom_smooth(method = "lm") -> p
-  
-  p + 
+         subtitle = model_formula) +
+    geom_smooth(method = "lm", color = "grey20") 
+}
+
+# function to specifically add element labels to a plot with ggrepel
+add_element_labels <- function(plot, label.size = 4.5, repel_seed = 11, ...) {
+  plot +
     geom_text_repel(
-      aes(label = ifelse(element %in% elements_to_label, 
-                         element, 
-                         "")
+      aes(
+        label = element,
+        color = label_color
       ),
-      color = label.color,
       size = label.size,
+      ...,
       fontface = "bold",
       min.segment.length = 0.0001,
       seed = repel_seed
-    ) 
+    ) +
+    scale_color_identity()
 }
-
 
 
 

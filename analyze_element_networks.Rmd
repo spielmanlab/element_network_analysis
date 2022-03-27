@@ -8,7 +8,7 @@ output:
     theme: lumen
     toc: true
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 
@@ -18,22 +18,24 @@ knitr::opts_chunk$set(warning=FALSE, message=FALSE, include=TRUE)
 library(tidyverse)
 library(dragon)
 library(broom)
-library(performance)
+library(performance) # also requires installing `see`
 library(ggtext)
 library(ggrepel)
 library(cowplot)
 library(DT)
 
-theme_set(theme_classic() + theme(plot.subtitle = element_markdown()))
 
-# ggrepel labeling
-label.color <- "darkgreen"
-label.size <- 4.5
+theme_set(theme_classic() + theme(plot.subtitle = element_markdown()))
 
 # output figure paths
 fig_dir <- "figures"
 ms_fig1_file <- file.path(fig_dir, "figure1.pdf")
 ms_fig2_file <- file.path(fig_dir, "figure2.pdf")
+
+# repel label defaults
+label.size <- 4.5
+green <- "forestgreen"
+blue <- "dodgerblue"
 
 #load utils
 source("utils.R")
@@ -85,7 +87,7 @@ datatable(element_networks_info)
 ### Analysis 1: What is the relationship between number of elements interacted with and number of minerals formed? This analysis asks if number of elements can explain number of minerals.
 
 
-<br>5
+<br>
 First, we explore whether we should likely transform an axis on a log-scale. Model diagnostics are shown below for the model with _log y and untransformed x_, whose diagnostics best meet assumptions.
 <br>
 
@@ -120,22 +122,38 @@ performance::check_model(model_ylog)
 
 get_model_info(model_ylog, "n_elements") -> model_info
 
+element_networks_info %>% 
+  mutate(n_minerals_log = log(n_minerals)) %>%
+  full_join(
+    tibble(
+      element =  c("C", "H", "O", "N", "P"), # "S" is manually added since overlaps with geom_smooth
+      label_color = green
+      )
+  ) -> plot_data
+
 
 make_plot(
-  element_networks_info %>% mutate(n_minerals_log = log(n_minerals)),
+  plot_data,
   n_elements,
   n_minerals_log,
-  model_info,
+  model_info$formula,
   "Number of Elements",
-  "Log Number of Minerals",
-  c("C", "H", "O", "N", "P", "S"),
-  4 #seed
-) -> model1_plot
-
+  "Log Number of Minerals") %>%
+  add_element_labels() + 
+  # manually add in S
+  geom_text(
+    aes(label = ifelse(element == "S", "S", "")),
+    nudge_y = -0.2,
+    nudge_x = -0.8,
+    fontface = "bold",
+    color = green,
+    size = label.size
+  )  -> model1_plot
 
 model1_plot
 ```
 
+The P-value for the above model is `r glue::glue("P={model_info$pvalue}")`.
 
 
 
@@ -176,33 +194,40 @@ performance::check_model(model_ylog)
 
 get_model_info(model_ylog, "n_elements") -> model_info
 
+element_networks_info %>% 
+  mutate(n_localities_log = log(n_localities)) %>%
+  full_join(
+    tibble(
+      element =  c("C", "H", "O", "N", "P", "Au"), # all green except Au is black, and "S" has to be manually added
+      label_color = c(rep(green, 5), "black")
+      )
+  ) -> plot_data
+
+
+
 make_plot(
-  element_networks_info %>% mutate(n_localities_log = log(n_localities)),
+  plot_data,
   n_elements,
   n_localities_log,
-  model_info,
+  model_info$formula,
   "Number of Elements",
-  "Log Number of Localities",
-  c("C", "H", "O", "N", "Au", "P"),
-  10
-) -> model2_plot
-
-# S and P have to be labeled separately
-model2_plot + 
+  "Log Number of Localities") %>%
+  add_element_labels(repel_seed = 1)  +
+   # manually add in S
   geom_text(
     aes(label = ifelse(element == "S", "S", "")),
-    nudge_y = 0.2,
-    nudge_x = -1,
+    nudge_y = 0.1,
+    nudge_x = -0.7,
     fontface = "bold",
-    color = label.color,
+    color = green,
     size = label.size
-  ) 
+  ) -> model2_plot
 
 model2_plot
 
 ```
 
-
+The P-value for the above model is `r glue::glue("P={model_info$pvalue}")`.
 
 
 ### Analysis 3: What is the relationship between number of elements interacted with and percentage of crust? This analysis asks if element crust percentage by weight can explain the number of elements.
@@ -250,44 +275,44 @@ lm(n_elements ~ element_crust_percent_weight_log, data = forfit) -> model_xlog
 get_model_info(model_xlog, "element_crust_percent_weight_log") -> model_info
 
 
+element_networks_info %>% 
+  mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)) %>%
+  full_join(
+    tibble(
+        element = c(c("O", "P", "S"), 
+                    c("As", "Pb", "Sc", "Ga", "Yb", "Br", "U"),
+                    c("Cu", "Fe", "Mn", "Zn", "Mo", "Co")), # manually "Ni"
+        label_color = c(rep(green, 3),
+                        rep("black", 7), 
+                        rep(blue,6)) # Ni is manual
+      )
+  ) -> plot_data
+
 make_plot(
-  element_networks_info %>% 
-    mutate(element_crust_percent_weight_log = log(element_crust_percent_weight)),
+  plot_data,
   element_crust_percent_weight_log,
   n_elements,
-  model_info,
+  model_info$formula,
   "Log crust percentage",
-  "Number of Elements",
-  c("As", "Pb", "Cu", "S", "O", "Fe", "Mn", "Zn", "P", "Mo", "Co", "Br", "Sc", "Yb", "Ga"),
-  11
-) -> model3_plot
-
-# P and Ni separately, except the bottom P just allows the first P....
-model3_plot + 
-  # This is an insane hack for P and I DO NOT REGRET IT!!
-  geom_text(
-    aes(label = ifelse(element == "P", "P", "")),
-    nudge_y = 2,
-    nudge_x = 0,
-    fontface = "bold",
-    color = "white",
-    size = label.size
-  ) +
+  "Number of Elements") %>%
+  add_element_labels(repel_seed = 4) + 
+  # manually add in Ni
   geom_text(
     aes(label = ifelse(element == "Ni", "Ni", "")),
-    nudge_y = -2.5,
-    nudge_x = -0.4,
+    nudge_y = -1.5,
+    nudge_x = 0.3,
     fontface = "bold",
-    color = label.color,
+    color = blue,
     size = label.size
-  )
+  ) -> model3_plot
 
+              
 
 
 model3_plot
-
 ```
 
+The P-value for the above model is `r glue::glue("P={model_info$pvalue}")`.
 
 
 ### Analysis 4: What is the relationship between number of elements interacted with and electronegativity? This analysis asks if the number of elements can explain the electronegativity.
@@ -334,7 +359,7 @@ make_plot(
   element_networks_info,
   n_elements,
   pauling,
-  model_info,
+  model_info$formula,
   "Number of Elements",
   "Pauling electronegativity"
 ) -> model4_plot
@@ -343,8 +368,6 @@ make_plot(
 
 model4_plot
 ```
-
-
 
 
 
@@ -382,7 +405,7 @@ performance::check_model(model_ylog)
 
 **The resulting model is as follows - _THERE IS NO RELATIONSHIP._**
 
-```{r model_plot, fig.height=4, fig.width=6}
+```{r model5_plot, fig.height=4, fig.width=6}
 
 get_model_info(model_ylog, "pauling") -> model_info
 
@@ -391,7 +414,7 @@ make_plot(
   element_networks_info %>% mutate(n_minerals_log = log(n_minerals)),
   pauling,
   n_minerals_log,
-  model_info,
+  model_info$formula,
   "Pauling electronegativity",
   "Log number of minerals formed"
 ) -> model5_plot
@@ -435,26 +458,36 @@ performance::check_model(model_plain)
 
 get_model_info(model_plain, "number_of_protons") -> model_info
 
-make_plot(
-  element_networks_info,
-  n_elements,
-  number_of_protons,
-  model_info,
-  "Number of Elements",
-  "Atomic number", # variable is number_of_protons which is equivalent
-   c("As", "Pb", "Cu", "S", "O", "Fe", "Mn", "P", "Zn", "Ni", "Co", "Br", "Sc", "Yb", "Ga", "C", "H", "N", "Bi", "U")
-) -> model6_plot
 
-# Mo is specifically annoying to label because it's ON the regression line
-model6_plot +
-  geom_text(
-    aes(label = ifelse(element == "Mo", "Mo", "")),
-    nudge_y = 3,
-    fontface = "bold",
-    color = label.color,
-    size = label.size) -> model6_plot
+
+element_networks_info %>% 
+  full_join(
+    tibble(
+        element = c(c("C", "H", "O", "P", "S", "N"), 
+                    c("As", "Pb", "Sc", "Ga", "Yb", "Br", "U", "Bi"),
+                    c("Cu", "Fe", "Mn", "Zn", "Mo", "Co", "Ni")),
+        label_color = c(rep("darkgreen", 6),
+                        rep("black", 8), 
+                        rep("dodgerblue",7)) 
+      )
+  ) -> plot_data
+
+
+make_plot(
+  plot_data,
+  number_of_protons,
+  n_elements,
+  model_info$formula,
+  "Atomic number", # variable is number_of_protons which is equivalent
+  "Number of Elements"
+) %>%
+add_element_labels() -> model6_plot 
+
 model6_plot
 ```
+
+The P-value for the above model is `r glue::glue("P={model_info$pvalue}")`.
+
 
 <br><br>
 
