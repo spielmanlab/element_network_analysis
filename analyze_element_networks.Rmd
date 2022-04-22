@@ -109,7 +109,7 @@ element_networks_info %>%
   pull(n_minerals)
 
 
-# How many minerals does hydrogen form?
+# How many minerals does nutrogen form?
 element_networks_info %>%
   filter(element == "N") %>%
   pull(n_minerals)
