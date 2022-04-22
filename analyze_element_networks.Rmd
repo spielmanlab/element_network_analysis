@@ -84,6 +84,89 @@ datatable(element_networks_info)
 
 <br><br>
 
+### Manuscript calculations
+
+This section performs several calculations that are included in manuscript text. These calculations use the same data (`element_networks_info`) used for all other network calculations.
+ 
+
+
+The following calculations ask either how many minerals an element forms, or how many elements it forms minerals with.
+
+```{r calcs}
+# How many minerals does carbon form?
+element_networks_info %>%
+  filter(element == "C") %>%
+  pull(n_minerals)
+
+# How many minerals does oxygen form?
+element_networks_info %>%
+  filter(element == "O") %>%
+  pull(n_minerals)
+
+# How many minerals does hydrogen form?
+element_networks_info %>%
+  filter(element == "H") %>%
+  pull(n_minerals)
+
+
+# How many minerals does hydrogen form?
+element_networks_info %>%
+  filter(element == "N") %>%
+  pull(n_minerals)
+
+
+# With how many elements, not including carbon itself, does carbon form minerals?
+element_networks_info %>%
+  filter(element == "C") %>%
+  pull(n_elements)
+
+# With how many elements, not including oxygen itself, does oxygen form minerals?
+element_networks_info %>%
+  filter(element == "O") %>%
+  pull(n_elements)
+
+# With how many elements, not including arsenic itself, does arsenic form minerals?
+element_networks_info %>%
+  filter(element == "As") %>%
+  pull(n_elements)
+
+# With how many elements, not including scandium itself, does scandium form minerals?
+element_networks_info %>%
+  filter(element == "Sc") %>%
+  pull(n_elements)
+```
+
+<br>
+
+The following calculations ask about the `Sc, Ga, Br, Yb` network at two time ranges.
+
+
+```{r calcs2, collapse=TRUE}
+
+elements <- c("Sc", "Ga", "Br", "Yb")
+
+# How many minerals are in the network >= 1.7 Ga? (ignore the "NULL" that gets printed here!)
+dragon::initialize_network(elements_of_interest = elements, 
+                             age_range = c(5, 1.7)) -> network_1.7
+network_1.7$edges %>%
+  select(mineral_name) %>%
+  distinct() %>%
+  tally()
+
+# How many minerals are in the network at present? (ignore the "NULL" that gets printed here!)
+dragon::initialize_network(elements_of_interest = elements, 
+                             age_range = c(5, 0)) -> network_presemt
+network_presemt$edges %>%
+  select(mineral_name) %>%
+  distinct() %>%
+  tally()
+
+
+```
+
+
+<br><br>
+
 ### Analysis 1: What is the relationship between number of elements interacted with and number of minerals formed? This analysis asks if number of elements can explain number of minerals.
 
 
