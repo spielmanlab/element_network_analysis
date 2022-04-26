@@ -134,6 +134,60 @@ element_networks_info %>%
 element_networks_info %>%
   filter(element == "Sc") %>%
   pull(n_elements)
+
+
+# What is the crust percentage of arsenic?
+element_networks_info %>%
+  filter(element == "As") %>%
+  pull(element_crust_percent_weight)
+
+
+# What is the crust percentage of scandium?
+element_networks_info %>%
+  filter(element == "Sc") %>%
+  pull(element_crust_percent_weight)
+
+
+# Compared to atomic number < 21, which element forms the fewest minerals?
+element_networks_info %>%
+  filter(number_of_protons < 21) %>%
+  select(element, n_minerals) %>%
+  arrange(n_minerals) %>%
+  slice(1)
+
+# Prepare data
+dragon:::med_data_cache %>%
+  select(mineral_name, chemistry_elements) %>%
+  distinct() -> minerals_and_their_elements
+
+# What percentage of C minerals contain C and H?
+minerals_and_their_elements %>%
+  # Carbon-containing elements only
+  filter(str_detect(chemistry_elements,"\\bC\\b")) %>%
+  # does it contain H?
+  mutate(has_h = str_detect(chemistry_elements,"\\bH\\b")) %>%
+  #calculate percentage
+  summarize(sum(has_h)/n())
+
+# What percentage of N minerals contain N and H?
+minerals_and_their_elements %>%
+  # Carbon-containing elements only
+  filter(str_detect(chemistry_elements,"\\bN\\b")) %>%
+  # does it contain H?
+  mutate(has_h = str_detect(chemistry_elements,"\\bH\\b")) %>%
+  #calculate percentage
+  summarize(sum(has_h)/n())
+
+# What percentage of C-and-N minerals contain H?
+minerals_and_their_elements %>%
+  # Carbon-containing elements only
+  filter(str_detect(chemistry_elements,"\\bN\\b"),
+         str_detect(chemistry_elements,"\\bC\\b")) %>%
+  # does it contain H?
+  mutate(has_h = str_detect(chemistry_elements,"\\bH\\b")) %>%
+  #calculate percentage
+  summarize(sum(has_h)/n())
+
 ```
 
 <br>
